@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Speak to Chess.com (Standard Notation)",
+  "description": "Play hands-free by dictating moves in standard chess notation (e.g. \"Queen D4\" or \"Castle King-side\").",
+  "version": "1.0.0",
+  "action": {
+    "default_icon": {
+      "16": "./images/icons/icon16.png",
+      "48": "./images/icons/icon48.png",
+      "128": "./images/icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "./images/icons/icon16.png",
+    "48": "./images/icons/icon48.png",
+    "128": "./images/icons/icon128.png"
+  },
+  "content_scripts": [
+    { 
+      "js": ["./scripts/script.js"],
+      "matches": [
+        "https://www.chess.com/game/live/*",
+        "https://www.chess.com/game/daily/*",
+        "https://www.chess.com/analysis/game/live/*",
+        "https://www.chess.com/analysis/game/daily/*"
+      ]
+    }
+  ]
+}
