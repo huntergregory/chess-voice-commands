@@ -7,11 +7,12 @@ Play hands-free on [chess.com](https://www.chess.com) by dictating moves in [sta
 ### Background
 [lichess.org](https://lichess.org) has implemented voice commands, but [chess.com](https://www.chess.com) does not have this feature.
 
-## Screenshots
+## Move by Voice
 | ![bishop capture](images/screenshots/bishop-takes-g7.png) | ![pawn capture](images/screenshots/pawn-c-d4.png)
 :----:|:----:
 
-![instructions](images/screenshots/instructions.png)
+### Validation & Feedback
+![feedback and instructions](images/screenshots/feedback-and-instructions.png)
 
 ## Architecture
 ### Flow
