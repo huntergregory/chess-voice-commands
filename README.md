@@ -1,5 +1,5 @@
 # Speak to Chess.com (Standard Notation)
-Source code for [the Chrome extension](https://chrome.google.com/webstore/category/extensions).
+Source code for [the Chrome extension](https://chrome.google.com/webstore/detail/speak-to-chesscom-standar/jhfacpfmnjeambcapipomocgnjmjgbaf).
 
 ## Overview
 Play hands-free on [chess.com](https://www.chess.com) by dictating moves in [standard chess notation](https://en.wikipedia.org/wiki/Algebraic_notation_(chess)).
@@ -8,11 +8,10 @@ Play hands-free on [chess.com](https://www.chess.com) by dictating moves in [sta
 [lichess.org](https://lichess.org) has implemented voice commands, but [chess.com](https://www.chess.com) does not have this feature.
 
 ## Move by Voice
-| ![bishop capture](images/screenshots/bishop-takes-g7.png) | ![pawn capture](images/screenshots/pawn-c-d4.png)
+Provides validation & feedback.
+| ![queen move](images/screenshots/queen-c2.png) | ![pawn capture](images/screenshots/pawn-e-d5.png) |
 :----:|:----:
-
-### Validation & Feedback
-![feedback and instructions](images/screenshots/feedback-and-instructions.png)
+| ![castle](images/screenshots/castle-king-side.png) | ![feedback and instructions](images/screenshots/feedback-and-instructions.png) |
 
 ## Architecture
 ### Flow
