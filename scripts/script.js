@@ -5,9 +5,11 @@
 // 2. square-0405
 
 // global constants
-const mustSayPawn = true;
 const voiceControlID = 'voice-control';
 const instructionsID = 'instructions';
+const checkboxesID = 'checkboxes';
+const mustSayPawnID = 'must-say-pawn';
+const showInstructionsID = 'show-instructions';
 
 const longestText = 'castle queen side';
 const transcriptSize = longestText.length + 5;
@@ -15,11 +17,6 @@ const defaultSuggestionText = '(feedback/suggestions appear here)';
 const ranks = ['1', '2', '3', '4', '5', '6', '7', '8'];
 const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 const majorMinorPieces = ['King', 'Queen', 'Rook', 'Bishop', 'Knight'];
-const allPieces = new Set(majorMinorPieces);
-allPieces.add('Pawn');
-if (!mustSayPawn) {
-    files.forEach(f => allPieces.add(f));
-}
 const piecesToHtmlClass = new Map(Object.entries({
     'King': 'k',
     'Queen': 'q',
@@ -46,7 +43,16 @@ for (let i = 0; i < files.length; i++) {
     coordinateToFile.set(i+1, files[i]);
 }
 // translations for potential improper speech recognition
-const translations = new Map(Object.entries({
+const translationsMultiWord = new Map(Object.entries({
+    'put on': 'pawn'
+}));
+const translationsSingleWord = new Map(Object.entries({
+    'be': 'b',
+    'pawnee': 'pawn e',
+    'pony': 'pawn e',
+    'pong': 'pawn',
+    'palm': 'pawn',
+    'on': 'pawn',
     'pain': 'pawn',
     'pond': 'pawn',
     'pawnee': 'pawn e',
@@ -56,6 +62,8 @@ const translations = new Map(Object.entries({
     'nights': 'knight',
     'knights': 'knight',
     'bishops': 'bishop',
+    'rookie': 'rook e',
+    'rock': 'rook',
     'rogue': 'rook',
     'broke': 'rook',
     'brook': 'rook',
@@ -101,7 +109,15 @@ const translations = new Map(Object.entries({
     '8:00': '8'
 }));
 
+function currentSecondsSinceEpoch() {
+    let d = new Date();
+    return d.getTime() / 1000;
+}
+
 // global variables
+let prevSpeechResult = '';
+let prevSpeechTime = currentSecondsSinceEpoch();
+let mustSayPawn = false;
 let lastUrl = null;
 let transcript;
 let suggestion;
@@ -153,10 +169,20 @@ function addHTML() {
     boardLayout.appendChild(getInstructions());
 }
 
+function hideInstructions() {
+    const instructions = document.getElementById(instructionsID);
+    instructions.style.display = 'none';
+}
+
+function revealInstructions() {
+    const instructions = document.getElementById(instructionsID);
+    instructions.style.display = 'block';
+}
+
 function getInstructions() {
     const instructions = document.createElement('div');
     instructions.setAttribute('id', instructionsID);
-    instructions.style.display = 'block';
+    instructions.style.display = 'none';
     instructions.style.backgroundColor = 'white';
     instructions.style.marginBottom = '2%';
     instructions.style.marginTop = '2%';
@@ -174,8 +200,8 @@ function getInstructions() {
 
     newP('Instructions:', true);
     let lines = [
-        '1. Press mic button (you can leave the button on for the whole game).',
-        '2. Announce your chess move.',
+        '1. Press mic button (can leave mic on).',
+        '2. Say your chess move.',
     ];
     lines.forEach(l => newP(l, false));
 
@@ -183,25 +209,22 @@ function getInstructions() {
     lines = [
         '- "Queen d4"',
         '- "Castle King-side"',
-        '- "Bishop takes c3" ("takes" is always optional)'
+        '- "Bishop takes c3" ("takes" is always optional)',
+        '- "Pawn g3"',
+        '- "g3" (if \'Must Say "Pawn"\' is unchecked)',
+        '- "Pawn f g3" (pawn capture)'
     ];
-    if (mustSayPawn) {
-        lines = lines.concat([
-            '- "pawn g3" (to avoid mis-clicks from slow speaking, "g3" is unsupported)',
-            '- "pawn fg3" (pawn capture)'
-        ]);
-    } else {
-        lines = lines.concat([
-            '- "g3" (pawn move. ok to say "pawn" too)',
-            '- "fg3" (pawn capture)'
-        ]);
-    }
     lines.forEach(l => newP(l, false));
 
     newP('Troubleshooting:', true);
     lines = [
         '1. Settings > Board > Move Method > Click.',
-        '2. Use default setting of playing at bottom of screen for both white and black.'
+        '2. Your player\'s color must start on the bottom of the board/screen.',
+        '3. If you prefer "Pawn g3" instead of "g3", you can check \'Must Say "Pawn"\' to prevent the second option.',
+        '4. "failed to start recording":',
+        'a) Make sure no other chess.com tabs have their mic turned on.',
+        'b) Try reclicking the mic button.',
+        'c) If that doesn\'t work, refresh the page. NOTE: in live games, please wait until white has moved twice. In puzzles, would lose progress.'
     ];
     lines.forEach(l => newP(l, false));
 
@@ -219,7 +242,43 @@ function getVoiceControl() {
 
     d.appendChild(getSpeechBtn());
     d.appendChild(getTranscriptAndSuggestion());
+    d.appendChild(getCheckboxes())
 
+    return d;
+}
+
+function getCheckboxes() {
+    const d = document.createElement('div');
+    d.setAttribute('id', checkboxesID);
+    d.style.display = 'block';
+    d.style.margin = '1%';
+
+    d.appendChild(checkbox(mustSayPawnID, 'Must Say "Pawn"', mustSayPawn));
+
+    const c2 = checkbox(showInstructionsID, 'Show Instructions', false);
+    // c2.style.marginLeft = '7px';
+    d.appendChild(c2);
+
+    return d;
+}
+
+function checkbox(id, text, checked) {
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.id = id;
+    checkbox.checked = checked;
+
+    // Create a label element
+    const label = document.createElement('label');
+    label.innerHTML = text;
+    label.appendChild(checkbox);
+
+    const d = document.createElement('div');
+    d.appendChild(label);
+
+    d.style.marginBottom = '1%';
+    d.style.padding = '2px';
+    // d.whiteSpace = 'pre-wrap';
     return d;
 }
 
@@ -307,11 +366,33 @@ document.addEventListener('click', (e) => {
             continueRecording = false;
             recognition.stop();
         } else {
-            setSuggestionStyleValid(defaultSuggestionText);
+            prevSpeechResult = '';
+            prevSpeechTime = currentSecondsSinceEpoch();
             setTranscriptText('');
             speechIcon.style.color = 'red';
-            continueRecording = true;
-            recognition.start();
+            try {
+                recognition.start();
+                continueRecording = true;
+                setSuggestionStyleValid(defaultSuggestionText);
+            } catch (err) {
+                console.log('failed to start recognition', err);
+                continueRecording = false;
+                setSuggestionStyleInvalid('failed to start recording (check "Show Instructions" and see "Troubleshooting"');
+            }
+        }
+    }
+});
+
+document.addEventListener('change', (e) => {
+    if (e.target.id === mustSayPawnID) {
+        mustSayPawn = e.target.checked;
+    }
+
+    if (e.target.id === showInstructionsID) {
+        if (e.target.checked) {
+            revealInstructions();
+        } else {
+            hideInstructions();
         }
     }
 });
@@ -349,19 +430,41 @@ function handleResult(e) {
 
     // preprocess words
     const words = preProcessedWords(result);
+    let speechTime = currentSecondsSinceEpoch();
+    if (prevSpeechResult.length > 0 && speechTime - prevSpeechTime < 5.0) {
+        // consider merging speech results if the previous result was spoken less than 5 seconds before
+        pieces = new Set(majorMinorPieces);
+        pieces.add('Pawn');
+        pieces.add('Castle');
+        if (pieces.has(prevSpeechResult) && !pieces.has(words[0])) {
+            // merge if previous result was just a piece name, and the current result does not mention a piece name (as the first word)
+            console.log('merging previous and current speech results. previous:', prevSpeechResult);
+            words.unshift(prevSpeechResult);
+        }
+    }
+    let speechResult = words.join(' ');
+    prevSpeechResult = speechResult;
+    prevSpeechTime = speechTime;
 
     // validate preprocessed words
+    allPieces = new Set(majorMinorPieces);
+    allPieces.add('Pawn');
+    if (!mustSayPawn) {
+        files.forEach(f => allPieces.add(f));
+        ranks.forEach(r => allPieces.add(r));
+    }
+
     const isCastle = words[0] === 'Castle';
     if (!allPieces.has(words[0]) && !isCastle) {
         let msg = 'start with "Castle", ' + majorMinorPieces.map(w => '"' + w + '"').join(', ');
         if (mustSayPawn) {
             msg +=  ', or "Pawn"';
         } else {
-            msg += ', "Pawn", or a file (for a pawn move)';
+            msg += ', or "Pawn"/file';
         }
 
         setSuggestionStyleInvalid(msg);
-        setTranscriptText(words.join(' '));
+        setTranscriptText(speechResult);
         return;
     }
 
@@ -374,24 +477,23 @@ function handleResult(e) {
         move.fromRank = rank;
         move.rank = rank;
 
-        const joined = words.join(' ');
-        if (joined === castleKingSide) {
+        if (speechResult === castleKingSide) {
             move.castleKingSide = true;
             move.file = 'g';
-        } else if (joined === castleQueenSide) {
+        } else if (speechResult === castleQueenSide) {
             move.castleQueenSide = true;
             move.file = 'c';
         } else {
             setSuggestionStyleInvalid('say "' + castleKingSide + '" or "' + castleQueenSide + '"');
-            setTranscriptText(words.join(' '));
+            setTranscriptText(speechResult);
             return;
         }
     } else {
         let valid = false;
         [move, valid] = validateChessNotation(words);
         if (!valid) {
-            setSuggestionStyleInvalid('format: [piece] [fromFile (rare)] [fromRank (rare)] ["takes" (optional)] file rank');
-            setTranscriptText(words.join(' '));
+            setSuggestionStyleInvalid('invalid format (try "Pawn a3", "Queen d4", or "Castle King-side")');
+            setTranscriptText(speechResult);
             return;
         }
     }
@@ -419,15 +521,21 @@ function preProcessedWords(t) {
     // remove punctuation
     t.replace('-', ' ');
     t.replace("'", '');
-    t.replace(",", '');
-    t.replace(".", '');
+    t.replace(',', '');
+    t.replace('.', '');
 
+    // replace phrases like "put on" -> "pawn"
+    for (const key of translationsMultiWord.keys()) {
+        const val = translationsMultiWord.get(key);
+        t.replace(key, val);
+    }
+
+    // replace individual words
     const words = t.split(' ');
-
     var cleanWords = words.map(w => {
         var val = w.toLowerCase();
-        if (translations.has(val)) {
-            return translations.get(val);
+        if (translationsSingleWord.has(val)) {
+            return translationsSingleWord.get(val);
         }
         return val;
     });
@@ -463,7 +571,20 @@ function preProcessedWords(t) {
         // 5. in case of e.g. "rook 5d 7"
         w = w.replace(/(\d)([a-z])/g, '$1 $2');
 
-        w.split(' ').forEach((e) => separated.push(e));
+        w.split(' ').forEach((e) => {
+            // in case of e.g. "rook ac 1" where we need to split "ac" into "a" and "c"
+            for (const f1 of files) {
+                for (const f2 of files) {
+                    if (e === f1 + f2) {
+                        separated.push(f1);
+                        separated.push(f2);
+                        return;
+                    }
+                }
+            }
+
+            separated.push(e);
+        });
     });
 
     return separated;
@@ -564,28 +685,26 @@ function validateChessNotation(words) {
         return [move, false];
     }
 
-    if (!files.includes(words[0])) {
-        return [move, false];
+    if (files.includes(words[0])) {
+        move.fromFile = words[0];
+
+        if (words.length === 1) {
+            return [move, true];
+        }
+
+        // remove the fromFile from the word array
+        words = words.slice(1);
     }
 
-    move.fromFile = words[0];
-    // remove the fromFile from the word array
-    words = words.slice(1);
-    
-    if (words.length === 0) {
-        return [move, true];
-    }
-
-    // weird to have the fromRank in the pawn capture, but we should not error on this
     if (ranks.includes(words[0])) {
         move.fromRank = words[0];
 
-        if (words.length === 0) {
+        if (words.length === 1) {
             return [move, true];
         }
     }
 
-    // invalid pawn capture
+    // invalid pawn move
     return [move, false];
 }
 
@@ -650,18 +769,30 @@ function validateMoveOnBoard(board, move) {
     const validPieces = Array.from(pieces).filter(p => validatePiece(board, move, p));
     if (validPieces.length === 0) {
         let msg = 'illegal move detected';
-        if (move.majorMinorPiece === '') {
+        if (move.majorMinorPiece.length === 0) {
             // pawn move
-            msg += ". pawn captures must mention the pawn's original file";
+            msg += '. pawn captures require the original file (e.g. "Pawn a b4")';
         }
         return [null, false, msg];
     }
 
-    if (validPieces.length > 1) {
-        return [null, false, validPieces.length.toString() + ' pieces can make this move. Be more descriptive (e.g. Queen f3 g2)'];
+    let validPiece = validPieces[0];
+    if (move.majorMinorPiece.length === 0 && validPieces.length == 2 && validPieces[0].fromFile == validPieces[1].fromFile) {
+        // edge case where pawn's stacked on each other on 2nd and 3rd rank (white), or 6th and 7th rank (black)
+        if (isBlack(board)) {
+            if (validPieces[1].fromRank === '6') {
+                validPiece = validPieces[1];
+            }
+        } else {
+            if (validPieces[1].fromRank === '3') {
+                validPiece = validPieces[1];
+            }
+        }
+    } else if (validPieces.length > 1) {
+        return [null, false, validPieces.length.toString() + ' pieces can make this move. Be more descriptive (e.g. Rook a1 c1)'];
     }
 
-    return [pieceCoords(validPieces[0]), true, ''];
+    return [pieceCoords(validPiece), true, ''];
 }
 
 function isBlack(board) {
